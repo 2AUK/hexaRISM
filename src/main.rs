@@ -1,4 +1,6 @@
 use ndarray::{Array, Array1};
+use charming::{component::Axis, series::Scatter, Chart};
+use gnuplot::{Figure, Caption, Color, Fix, AxesCommon};
 
 fn lennard_jones(eps: f64, sig: f64, r: &Array1<f64>) -> Array1<f64> {
     let mut ir = sig / r;
@@ -16,5 +18,10 @@ fn main() {
     let dr = radius / npts as f64;
     let r = Array::range(0.5, npts as f64, 1.0) * dr;
     let potential = lennard_jones(epsilon, sigma, &r);
-    println!("Hello, world!");
+
+    let r_vec = r.to_vec();
+    let lj_vec = potential.to_vec();
+    let mut fg = Figure::new();
+    fg.axes2d().lines(&r_vec, &lj_vec, &[Caption("Lennard-Jones"), Color("black")]).set_y_range(Fix(-1.5), Fix(1.0)).set_x_range(Fix(0.0), Fix(5.0));
+    fg.show();
 }
