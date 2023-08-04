@@ -12,6 +12,10 @@ fn lennard_jones(eps: f64, sig: f64, r: &Array1<f64>) -> Array1<f64> {
     4.0 * eps * (ir12.to_owned() - ir6.to_owned())
 }
 
+fn weeks_chandler_andersen(eps: f64, sig: f64, r: &Array1<f64>) -> Array1<f64> {
+    todo!()
+}
+
 fn main() {
     let (epsilon, sigma) = (1.0, 1.0);
     let (npts, radius) = (1024, 10.24);
