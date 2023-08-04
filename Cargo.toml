@@ -4,5 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+charming = { version = "0.2.4", features = ["ssr"] }
 ndarray = { version = "0.15.6", features = ["blas", "rayon"] }
 rayon = "1.7.0"
