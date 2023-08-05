@@ -27,6 +27,28 @@ fn j0(a: f64) -> f64 {
     a.sin() / a
 }
 
+fn plot_potentials(r: &Array1<f64>, lj: &Array1<f64>, wca: &Array1<f64>) {
+    let r_vec = r.to_vec();
+    let lj_vec = lj.to_vec();
+    let wca_vec = wca.to_vec();
+    let mut fg = Figure::new();
+    fg.axes2d()
+        .lines(&r_vec, &lj_vec, &[LineWidth(1.5), Caption("Lennard-Jones"), Color("black")])
+        .set_y_range(Fix(-1.5), Fix(1.0))
+        .set_x_range(Fix(0.0), Fix(5.0))
+        .lines(&r_vec, &wca_vec, &[LineWidth(1.5), Caption("Weeks-Chandler-Andersen"), Color("red")]);
+    fg.show().unwrap();
+}
+
+fn plot(x: &Array1<f64>, y: &Array1<f64>) {
+    let x_vec = x.to_vec();
+    let y_vec = y.to_vec();
+    let mut fg = Figure::new();
+    fg.axes2d()
+        .lines(&x_vec, &y_vec, &[LineWidth(1.5), Color("black")]);
+    fg.show().unwrap();
+}
+
 fn main() {
     let (epsilon, sigma) = (1.0, 1.0);
     let (npts, radius) = (1024, 10.24);
@@ -43,17 +65,8 @@ fn main() {
     let j0_between = 2.0 * k.mapv(|a| j0(a * bond_length * (3.0_f64).sqrt()));
     let j0_opposite = k.mapv(|a| 2.0 * a * bond_length);
 
-    let w = 1.0 + j0_adjacent + j0_between + j0_opposite;
+    let intramolecular_correlation = 1.0 + j0_adjacent + j0_between + j0_opposite;
 
-
-    let r_vec = r.to_vec();
-    let lj_vec = lj_potential.to_vec();
-    let wca_vec = wca_potential.to_vec();
-    let mut fg = Figure::new();
-    fg.axes2d()
-        .lines(&r_vec, &lj_vec, &[LineWidth(1.5), Caption("Lennard-Jones"), Color("black")])
-        .set_y_range(Fix(-1.5), Fix(1.0))
-        .set_x_range(Fix(0.0), Fix(5.0))
-        .lines(&r_vec, &wca_vec, &[LineWidth(1.5), Caption("Weeks-Chandler-Andersen"), Color("red")]);
-    fg.show();
+    plot_potentials(&r, &lj_potential, &wca_potential);
+    plot(&k, &intramolecular_correlation);
 }

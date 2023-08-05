@@ -1,5 +1,5 @@
 [package]
-name = "hexaRISM"
+name = "hexa_rism"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,3 +7,4 @@ edition = "2021"
 gnuplot = "0.0.39"
 ndarray = { version = "0.15.6", features = ["blas", "rayon"] }
 rayon = "1.7.0"
+rustdct = "0.7.1"
