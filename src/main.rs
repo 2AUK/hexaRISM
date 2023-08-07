@@ -105,7 +105,7 @@ fn main() {
     let lj_potential = lennard_jones(epsilon, sigma, &r);
     let wca_potential = weeks_chandler_andersen(epsilon, sigma, &r);
 
-    let mayer_f = -beta * &lj_potential.mapv(|a| f64::exp(-a)) - 1.0;
+    let mayer_f = (&lj_potential).mapv(|a| f64::exp(-beta * a)) - 1.0;
 
     let bond_length = 1.0;
 
@@ -146,5 +146,5 @@ fn main() {
     println!("beta: {beta}");
     let gr = (&tr + &cr) + 1.0;
     println!("{}\n{}\n{}", cr, tr, gr);
-    plot(&r, &gr);
+    // plot(&r, &gr);
 }
