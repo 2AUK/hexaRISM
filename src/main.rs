@@ -1,6 +1,6 @@
 use gnuplot::{AxesCommon, Caption, Color, Figure, Fix, LineWidth};
 use ndarray::{Array, Array1};
-use rustdct::{DctPlanner, TransformType4};
+use rustdct::{DctPlanner, TransformType4, Dst1};
 use std::{f64::consts::PI, sync::Arc};
 use approx::assert_relative_eq;
 
@@ -98,7 +98,7 @@ fn main() {
     let plan: Arc<dyn TransformType4<f64>> = DctPlanner::new().plan_dst4(npts);
 
     let rtok = 2.0 * PI * dr;
-    let ktor = dk / (2.0 * PI).powf(2.0);
+    let ktor = dk / (PI).powf(2.0);
 
     let r = Array::range(0.5, npts as f64, 1.0) * dr;
     let k = Array::range(0.5, npts as f64, 1.0) * dk;
@@ -120,28 +120,33 @@ fn main() {
 
     let mayer_f_k = hankel_transform(rtok, &mayer_f, &r, &k, &plan);
     let mayer_f_r = hankel_transform(ktor, &mayer_f_k, &k, &r, &plan);
+    plot(&r, &mayer_f);
+    plot(&r, &mayer_f_r);
     assert_relative_eq!(mayer_f, mayer_f_r, epsilon=1e-5);
 
+    let kfromr = hankel_transform(rtok, &r, &r, &k, &plan);
+    println!("k: {}\nk from r: {}", k, kfromr);
 
     // plot_potentials(&r, &lj_potential, &wca_potential);
     // plot(&k, &intramolecular_correlation_rspace);
 
-    let (itermax, tol) = (1000, 1e-7);
+    let (itermax, tol) = (10, 1e-7);
     let damp = 0.217;
 
     for i in 0..itermax {
         println!("Iteration: {i}");
         let cr_prev = cr.clone();
         let ck = hankel_transform(rtok, &cr, &r, &k, &plan);
-        println!("ck before: {}", ck);
+        println!("cr before: {}", cr_prev);
         let tk = rism(&ck, &wk, p);
-        println!("ck after: {}", ck);
+        let crfromck = hankel_transform(ktor, &ck, &k, &r, &plan);
+        println!("cr after: {}", crfromck);
         println!("tk: {}", tk);
         tr = hankel_transform(ktor, &tk, &k, &r, &plan);
         println!("tr: {}", tr);
         let cr_a = hnc(&tr, &lj_potential, beta);
         println!("cr_a: {}", cr_a);
-        cr = &cr_prev + (damp * (&cr_a - &cr_prev));
+        cr = &cr_prev - (damp * (&cr_a - &cr_prev));
     }
     println!("beta: {beta}");
     let gr = (&tr + &cr) + 1.0;
