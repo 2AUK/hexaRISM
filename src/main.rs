@@ -77,8 +77,12 @@ fn plot(x: &Array1<f64>, y: &Array1<f64>) {
     fg.show().unwrap();
 }
 
-fn RISM(ck: Array1<f64>, wk: Array1<f64>) -> Array1<f64> {
-    todo!()
+fn RISM(ck: &Array1<f64>, wk: &Array1<f64>, p: f64) -> Array1<f64> {
+    ((ck * wk * wk) / (1.0 - 6.0 * p * wk * ck)) - ck
+}
+
+fn HNC_closure(tr: Array1<f64>, ur: Array1<f64>, beta: f64) -> Array1<f64> {
+    (-beta * ur + tr).mapv(|a| a.exp())
 }
 
 fn main() {
