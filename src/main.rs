@@ -34,7 +34,7 @@ fn hankel_transform(
     func: &Array1<f64>,
     grid_a: &Array1<f64>,
     grid_b: &Array1<f64>,
-    plan: Arc<dyn TransformType4<f64>>,
+    plan: &Arc<dyn TransformType4<f64>>,
 ) -> Array1<f64> {
     let mut buffer = (func * grid_a).to_vec();
 
@@ -81,7 +81,7 @@ fn RISM(ck: &Array1<f64>, wk: &Array1<f64>, p: f64) -> Array1<f64> {
     ((ck * wk * wk) / (1.0 - 6.0 * p * wk * ck)) - ck
 }
 
-fn HNC_closure(tr: Array1<f64>, ur: Array1<f64>, beta: f64) -> Array1<f64> {
+fn HNC_closure(tr: Array1<f64>, ur: &Array1<f64>, beta: f64) -> Array1<f64> {
     (-beta * ur + tr).mapv(|a| a.exp())
 }
 
@@ -112,11 +112,27 @@ fn main() {
 
     let wk = 1.0 + j0_adjacent + j0_between + j0_opposite;
 
-    let c = Array1::<f64>::zeros(npts);
+    let mut cr = Array1::<f64>::zeros(npts);
 
     // let intramolecular_correlation_rspace =
     //     hankel_transform(ktor, &intramolecular_correlation_kspace, &k, &r, plan);
 
     // plot_potentials(&r, &lj_potential, &wca_potential);
     // plot(&k, &intramolecular_correlation_rspace);
+
+    let (itermax, tol) = (1000, 1e-7);
+    let damp = 0.4;
+
+    for i in 0..itermax {
+        println!("Iteration: {i} ");
+        let cr_prev = cr.clone();
+        let ck = hankel_transform(rtok, &cr, &r, &k, &plan);
+        let tk = RISM(&ck, &wk, p);
+        let tr = hankel_transform(ktor, &tk, &k, &r, &plan);
+        let cr_A = HNC_closure(tr, &lj_potential, beta);
+        cr = &cr_prev + damp * (&cr_A - &cr_prev);
+    }
+
+    plot(&r, &cr);
+
 }
