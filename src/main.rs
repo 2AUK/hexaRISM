@@ -2,6 +2,7 @@ use gnuplot::{AxesCommon, Caption, Color, Figure, Fix, LineWidth};
 use ndarray::{Array, Array1};
 use rustdct::{DctPlanner, TransformType4};
 use std::{f64::consts::PI, sync::Arc};
+use approx::assert_relative_eq;
 
 fn lennard_jones(eps: f64, sig: f64, r: &Array1<f64>) -> Array1<f64> {
     let mut ir = sig / r;
@@ -87,7 +88,7 @@ fn hnc(tr: &Array1<f64>, ur: &Array1<f64>, beta: f64) -> Array1<f64> {
 
 fn main() {
     let (epsilon, sigma) = (1.0, 1.0);
-    let (npts, radius) = (10, 10.24);
+    let (npts, radius) = (1024, 10.24);
     let k_b = 1.0;
     let (T, p) = (1.6, 0.02);
     let beta = 1.0 / T / k_b;
@@ -119,13 +120,13 @@ fn main() {
 
     let mayer_f_k = hankel_transform(rtok, &mayer_f, &r, &k, &plan);
     let mayer_f_r = hankel_transform(ktor, &mayer_f_k, &k, &r, &plan);
-    println!("{}, {}", mayer_f, mayer_f_r);
+    assert_relative_eq!(mayer_f, mayer_f_r, epsilon=1e-5);
 
 
     // plot_potentials(&r, &lj_potential, &wca_potential);
     // plot(&k, &intramolecular_correlation_rspace);
 
-    let (itermax, tol) = (5, 1e-7);
+    let (itermax, tol) = (1000, 1e-7);
     let damp = 0.217;
 
     for i in 0..itermax {

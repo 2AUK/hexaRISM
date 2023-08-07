@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+approx = "0.5.1"
 gnuplot = "0.0.39"
-ndarray = { version = "0.15.6", features = ["blas", "rayon"] }
+ndarray = { version = "0.15.6", features = ["blas", "rayon", "approx-0_5"] }
 rayon = "1.7.0"
 rustdct = "0.7.1"
