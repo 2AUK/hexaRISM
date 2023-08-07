@@ -40,7 +40,7 @@ fn hankel_transform(
 
     plan.process_dst4(&mut buffer);
 
-    prefac * Array::from_vec(buffer) / grid_b
+    prefac * Array1::from_vec(buffer) / grid_b
 }
 
 fn plot_potentials(r: &Array1<f64>, lj: &Array1<f64>, wca: &Array1<f64>) {
@@ -86,13 +86,13 @@ fn hnc(tr: &Array1<f64>, ur: &Array1<f64>, beta: f64) -> Array1<f64> {
 }
 
 fn main() {
-    let (epsilon, sigma) = (120.0, 1.16);
-    let (npts, radius) = (1024, 10.24);
+    let (epsilon, sigma) = (1.0, 1.0);
+    let (npts, radius) = (10, 10.24);
     let k_b = 1.0;
-    let (T, p) = (298.0, 0.02);
+    let (T, p) = (1.6, 0.02);
     let beta = 1.0 / T / k_b;
     let dr = radius / npts as f64;
-    let dk = 2.0 * std::f64::consts::PI / (2.0 * npts as f64 * dr);
+    let dk = 2.0 * PI / (2.0 * npts as f64 * dr);
 
     let plan: Arc<dyn TransformType4<f64>> = DctPlanner::new().plan_dst4(npts);
 
@@ -103,6 +103,8 @@ fn main() {
     let k = Array::range(0.5, npts as f64, 1.0) * dk;
     let lj_potential = lennard_jones(epsilon, sigma, &r);
     let wca_potential = weeks_chandler_andersen(epsilon, sigma, &r);
+
+    let mayer_f = -beta * &lj_potential.mapv(|a| f64::exp(-a)) - 1.0;
 
     let bond_length = 1.0;
 
@@ -115,8 +117,10 @@ fn main() {
     let mut cr = Array1::<f64>::zeros(npts);
     let mut tr = Array1::<f64>::zeros(npts);
 
-    // let intramolecular_correlation_rspace =
-    //     hankel_transform(ktor, &intramolecular_correlation_kspace, &k, &r, plan);
+    let mayer_f_k = hankel_transform(rtok, &mayer_f, &r, &k, &plan);
+    let mayer_f_r = hankel_transform(ktor, &mayer_f_k, &k, &r, &plan);
+    println!("{}, {}", mayer_f, mayer_f_r);
+
 
     // plot_potentials(&r, &lj_potential, &wca_potential);
     // plot(&k, &intramolecular_correlation_rspace);
@@ -128,15 +132,17 @@ fn main() {
         println!("Iteration: {i}");
         let cr_prev = cr.clone();
         let ck = hankel_transform(rtok, &cr, &r, &k, &plan);
-        println!("ck: {}", ck);
+        println!("ck before: {}", ck);
         let tk = rism(&ck, &wk, p);
+        println!("ck after: {}", ck);
         println!("tk: {}", tk);
         tr = hankel_transform(ktor, &tk, &k, &r, &plan);
         println!("tr: {}", tr);
         let cr_a = hnc(&tr, &lj_potential, beta);
         println!("cr_a: {}", cr_a);
-        cr = &cr_prev + damp * (&cr_a - &cr_prev);
+        cr = &cr_prev + (damp * (&cr_a - &cr_prev));
     }
+    println!("beta: {beta}");
     let gr = (&tr + &cr) + 1.0;
     println!("{}\n{}\n{}", cr, tr, gr);
     plot(&r, &gr);
