@@ -77,19 +77,19 @@ fn plot(x: &Array1<f64>, y: &Array1<f64>) {
     fg.show().unwrap();
 }
 
-fn RISM(ck: &Array1<f64>, wk: &Array1<f64>, p: f64) -> Array1<f64> {
+fn rism(ck: &Array1<f64>, wk: &Array1<f64>, p: f64) -> Array1<f64> {
     ((ck * wk * wk) / (1.0 - 6.0 * p * wk * ck)) - ck
 }
 
-fn HNC_closure(tr: &Array1<f64>, ur: &Array1<f64>, beta: f64) -> Array1<f64> {
-    (-beta * ur + tr).mapv(|a| a.exp())
+fn hnc(tr: &Array1<f64>, ur: &Array1<f64>, beta: f64) -> Array1<f64> {
+    (-beta * ur + tr).mapv(f64::exp) - 1.0 - tr
 }
 
 fn main() {
-    let (epsilon, sigma) = (1.0, 1.0);
+    let (epsilon, sigma) = (120.0, 1.16);
     let (npts, radius) = (1024, 10.24);
     let k_b = 1.0;
-    let (T, p) = (1.6, 0.02);
+    let (T, p) = (298.0, 0.02);
     let beta = 1.0 / T / k_b;
     let dr = radius / npts as f64;
     let dk = 2.0 * std::f64::consts::PI / (2.0 * npts as f64 * dr);
@@ -121,19 +121,23 @@ fn main() {
     // plot_potentials(&r, &lj_potential, &wca_potential);
     // plot(&k, &intramolecular_correlation_rspace);
 
-    let (itermax, tol) = (1000, 1e-7);
-    let damp = 0.4;
+    let (itermax, tol) = (5, 1e-7);
+    let damp = 0.217;
 
     for i in 0..itermax {
-        println!("Iteration: {i} ");
+        println!("Iteration: {i}");
         let cr_prev = cr.clone();
         let ck = hankel_transform(rtok, &cr, &r, &k, &plan);
-        let tk = RISM(&ck, &wk, p);
+        println!("ck: {}", ck);
+        let tk = rism(&ck, &wk, p);
+        println!("tk: {}", tk);
         tr = hankel_transform(ktor, &tk, &k, &r, &plan);
-        let cr_A = HNC_closure(&tr, &lj_potential, beta);
-        cr = &cr_prev + damp * (&cr_A - &cr_prev);
+        println!("tr: {}", tr);
+        let cr_a = hnc(&tr, &lj_potential, beta);
+        println!("cr_a: {}", cr_a);
+        cr = &cr_prev + damp * (&cr_a - &cr_prev);
     }
     let gr = (&tr + &cr) + 1.0;
+    println!("{}\n{}\n{}", cr, tr, gr);
     plot(&r, &gr);
-
 }
