@@ -110,7 +110,7 @@ fn main() {
     let j0_between = 2.0 * k.mapv(|a| j0(a * bond_length * (3.0_f64).sqrt()));
     let j0_opposite = k.mapv(|a| 2.0 * a * bond_length);
 
-    let intramolecular_correlation_kspace = 1.0 + j0_adjacent + j0_between + j0_opposite;
+    let wk = 1.0 + j0_adjacent + j0_between + j0_opposite;
 
     let c = Array1::<f64>::zeros(npts);
 
