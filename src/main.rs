@@ -77,9 +77,16 @@ fn plot(x: &Array1<f64>, y: &Array1<f64>) {
     fg.show().unwrap();
 }
 
+fn RISM(ck: Array1<f64>, wk: Array1<f64>) -> Array1<f64> {
+    todo!()
+}
+
 fn main() {
     let (epsilon, sigma) = (1.0, 1.0);
     let (npts, radius) = (1024, 10.24);
+    let k_b = 1.0;
+    let (T, p) = (1.6, 0.02);
+    let beta = 1.0 / T / k_b;
     let dr = radius / npts as f64;
     let dk = 2.0 * std::f64::consts::PI / (2.0 * npts as f64 * dr);
 
@@ -100,9 +107,12 @@ fn main() {
     let j0_opposite = k.mapv(|a| 2.0 * a * bond_length);
 
     let intramolecular_correlation_kspace = 1.0 + j0_adjacent + j0_between + j0_opposite;
-    let intramolecular_correlation_rspace =
-        hankel_transform(ktor, &intramolecular_correlation_kspace, &k, &r, plan);
 
-    plot_potentials(&r, &lj_potential, &wca_potential);
-    plot(&k, &intramolecular_correlation_rspace);
+    let c = Array1::<f64>::zeros(npts);
+
+    // let intramolecular_correlation_rspace =
+    //     hankel_transform(ktor, &intramolecular_correlation_kspace, &k, &r, plan);
+
+    // plot_potentials(&r, &lj_potential, &wca_potential);
+    // plot(&k, &intramolecular_correlation_rspace);
 }
