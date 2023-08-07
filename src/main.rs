@@ -81,7 +81,7 @@ fn RISM(ck: &Array1<f64>, wk: &Array1<f64>, p: f64) -> Array1<f64> {
     ((ck * wk * wk) / (1.0 - 6.0 * p * wk * ck)) - ck
 }
 
-fn HNC_closure(tr: Array1<f64>, ur: &Array1<f64>, beta: f64) -> Array1<f64> {
+fn HNC_closure(tr: &Array1<f64>, ur: &Array1<f64>, beta: f64) -> Array1<f64> {
     (-beta * ur + tr).mapv(|a| a.exp())
 }
 
@@ -113,6 +113,7 @@ fn main() {
     let wk = 1.0 + j0_adjacent + j0_between + j0_opposite;
 
     let mut cr = Array1::<f64>::zeros(npts);
+    let mut tr = Array1::<f64>::zeros(npts);
 
     // let intramolecular_correlation_rspace =
     //     hankel_transform(ktor, &intramolecular_correlation_kspace, &k, &r, plan);
@@ -128,11 +129,11 @@ fn main() {
         let cr_prev = cr.clone();
         let ck = hankel_transform(rtok, &cr, &r, &k, &plan);
         let tk = RISM(&ck, &wk, p);
-        let tr = hankel_transform(ktor, &tk, &k, &r, &plan);
-        let cr_A = HNC_closure(tr, &lj_potential, beta);
+        tr = hankel_transform(ktor, &tk, &k, &r, &plan);
+        let cr_A = HNC_closure(&tr, &lj_potential, beta);
         cr = &cr_prev + damp * (&cr_A - &cr_prev);
     }
-
-    plot(&r, &cr);
+    let gr = (&tr + &cr) + 1.0;
+    plot(&r, &gr);
 
 }
