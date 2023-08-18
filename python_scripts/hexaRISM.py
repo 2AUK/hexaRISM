@@ -33,7 +33,7 @@ radius = 10.24
 dr = radius / float(npts)
 dk = 2 * np.pi / (2 * float(npts) * dr)
 T = 1.6
-p = 0.2
+p = 0.02
 kb = 1.0
 beta = 1 / T / kb
 l = 1.0
@@ -51,7 +51,7 @@ wk = 1.0 + j0_adj + j0_bet + j0_opp
 cr = np.zeros_like(r)
 tr = np.zeros_like(r)
 
-max_iter, tol = 10, 1e-7
+max_iter, tol = 100, 1e-7
 damp = 1.0
 
 for i in range(max_iter):
