@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 approx = "0.5.1"
+fftw = "0.8.0"
 gnuplot = "0.0.39"
 ndarray = { version = "0.15.6", features = ["blas", "rayon", "approx-0_5"] }
 rayon = "1.7.0"

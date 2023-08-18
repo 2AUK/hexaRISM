@@ -1,6 +1,7 @@
 use gnuplot::{AxesCommon, Caption, Color, Figure, Fix, LineWidth};
 use ndarray::{Array, Array1};
-use rustdct::{DctPlanner, TransformType4, Dst1};
+use rustdct::{DctPlanner, TransformType4, Dst4, Dst1};
+use rustdct::algorithm::{Type4Naive, Dst1Naive};
 use std::{f64::consts::PI, sync::Arc};
 use approx::assert_relative_eq;
 
@@ -39,7 +40,13 @@ fn hankel_transform(
 ) -> Array1<f64> {
     let mut buffer = (func * grid_a).to_vec();
 
-    plan.process_dst4(&mut buffer);
+    let npts = func.len();
+
+    let dst = Type4Naive::new(npts);
+
+    //let dst1 = Dst1Naive::new(npts);
+
+    dst.process_dst4(&mut buffer);
 
     prefac * Array1::from_vec(buffer) / grid_b
 }
@@ -79,11 +86,14 @@ fn plot(x: &Array1<f64>, y: &Array1<f64>) {
 }
 
 fn rism(ck: &Array1<f64>, wk: &Array1<f64>, p: f64) -> Array1<f64> {
-    ((ck * wk * wk) / (1.0 - 6.0 * p * wk * ck)) - ck
+    let top = ck * wk * wk;
+    let bottom = 1.0 - (6.0 * p * wk * ck);
+    let hk = top / bottom;
+    hk - ck
 }
 
 fn hnc(tr: &Array1<f64>, ur: &Array1<f64>, beta: f64) -> Array1<f64> {
-    (-beta * ur + tr).mapv(f64::exp) - 1.0 - tr
+    ((-beta * ur) + tr).mapv(f64::exp) - 1.0 - tr
 }
 
 fn main() {
@@ -98,7 +108,7 @@ fn main() {
     let plan: Arc<dyn TransformType4<f64>> = DctPlanner::new().plan_dst4(npts);
 
     let rtok = 2.0 * PI * dr;
-    let ktor = dk / (PI).powf(2.0);
+    let ktor = dk / PI / PI;
 
     let r = Array::range(0.5, npts as f64, 1.0) * dr;
     let k = Array::range(0.5, npts as f64, 1.0) * dk;
@@ -115,40 +125,40 @@ fn main() {
 
     let wk = 1.0 + j0_adjacent + j0_between + j0_opposite;
 
-    let mut cr = Array1::<f64>::zeros(npts);
-    let mut tr = Array1::<f64>::zeros(npts);
-
     let mayer_f_k = hankel_transform(rtok, &mayer_f, &r, &k, &plan);
     let mayer_f_r = hankel_transform(ktor, &mayer_f_k, &k, &r, &plan);
-    plot(&r, &mayer_f);
-    plot(&r, &mayer_f_r);
-    assert_relative_eq!(mayer_f, mayer_f_r, epsilon=1e-5);
+    //plot(&r, &mayer_f);
+    //plot(&r, &mayer_f_r);
+    //assert_relative_eq!(mayer_f, mayer_f_r, epsilon=1e-5);
 
-    let kfromr = hankel_transform(rtok, &r, &r, &k, &plan);
-    println!("k: {}\nk from r: {}", k, kfromr);
+    let mut cr = Array1::<f64>::zeros(npts);
+    let mut tr = Array1::<f64>::zeros(npts);
+    let ones = Array1::<f64>::ones(npts);
+    let kfromr = hankel_transform(rtok, &ones, &r, &k, &plan);
+    // println!("k: {}\nk from r: {}", k, kfromr);
 
     // plot_potentials(&r, &lj_potential, &wca_potential);
     // plot(&k, &intramolecular_correlation_rspace);
 
     let (itermax, tol) = (10, 1e-7);
-    let damp = 0.217;
+    let damp = 0.1;
 
     for i in 0..itermax {
         println!("Iteration: {i}");
         let cr_prev = cr.clone();
-        let ck = hankel_transform(rtok, &cr, &r, &k, &plan);
+        let ck = hankel_transform(rtok, &cr_prev.clone(), &r, &k, &plan);
         println!("cr before: {}", cr_prev);
         let tk = rism(&ck, &wk, p);
-        let crfromck = hankel_transform(ktor, &ck, &k, &r, &plan);
+        let crfromck = hankel_transform(ktor, &ck.clone(), &k, &r, &plan);
         println!("cr after: {}", crfromck);
         println!("tk: {}", tk);
         tr = hankel_transform(ktor, &tk, &k, &r, &plan);
         println!("tr: {}", tr);
         let cr_a = hnc(&tr, &lj_potential, beta);
         println!("cr_a: {}", cr_a);
-        cr = &cr_prev - (damp * (&cr_a - &cr_prev));
+        println!("cr_prev: {}", cr_prev.clone());
+        cr = cr_prev.clone() + damp * (cr_a.clone() - cr_prev.clone());
     }
-    println!("beta: {beta}");
     let gr = (&tr + &cr) + 1.0;
     println!("{}\n{}\n{}", cr, tr, gr);
     // plot(&r, &gr);
