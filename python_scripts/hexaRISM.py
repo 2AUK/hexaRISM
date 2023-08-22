@@ -32,8 +32,8 @@ radius = 10.24
 
 dr = radius / float(npts)
 dk = 2 * np.pi / (2 * float(npts) * dr)
-T = 1.6
-p = 0.02
+T = 298.0
+p = 1.0
 kb = 1.0
 beta = 1 / T / kb
 l = 1.0
