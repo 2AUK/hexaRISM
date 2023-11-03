@@ -1,9 +1,11 @@
+use approx::assert_relative_eq;
+use fftw::plan::*;
+use fftw::types::*;
 use gnuplot::{AxesCommon, Caption, Color, Figure, Fix, LineWidth};
 use ndarray::{Array, Array1};
-use rustdct::{DctPlanner, TransformType4, Dst4, Dst1};
-use rustdct::algorithm::{Type4Naive, Dst1Naive};
+use rustdct::algorithm::{Dst1Naive, Type4Naive};
+use rustdct::{DctPlanner, Dst1, Dst4, TransformType4};
 use std::{f64::consts::PI, sync::Arc};
-use approx::assert_relative_eq;
 
 fn lennard_jones(eps: f64, sig: f64, r: &Array1<f64>) -> Array1<f64> {
     let mut ir = sig / r;
@@ -34,21 +36,33 @@ fn j0(a: f64) -> f64 {
 fn hankel_transform(
     prefac: f64,
     func: &Array1<f64>,
-    grid_a: &Array1<f64>,
-    grid_b: &Array1<f64>,
-    plan: &Arc<dyn TransformType4<f64>>,
+    grid1: &Array1<f64>,
+    grid2: &Array1<f64>,
 ) -> Array1<f64> {
-    let mut buffer = (func * grid_a).to_vec();
+    // let mut buffer = (func * grid_a).to_vec();
+    //
+    // let npts = func.len();
+    //
+    // let dst = Type4Naive::new(npts);
+    //
+    // //let dst1 = Dst1Naive::new(npts);
+    //
+    // dst.process_dst4(&mut buffer);
+    //
+    // prefac * Array1::from_vec(buffer) / grid_b
 
-    let npts = func.len();
-
-    let dst = Type4Naive::new(npts);
-
-    //let dst1 = Dst1Naive::new(npts);
-
-    dst.process_dst4(&mut buffer);
-
-    prefac * Array1::from_vec(buffer) / grid_b
+    let arr = func * grid1;
+    let mut r2r: R2RPlan64 =
+        R2RPlan::aligned(&[grid1.len()], R2RKind::FFTW_RODFT11, Flag::ESTIMATE)
+            .expect("could not execute FFTW plan");
+    let mut input = arr.as_standard_layout();
+    let mut output = Array1::zeros(input.raw_dim());
+    r2r.r2r(
+        input.as_slice_mut().unwrap(),
+        output.as_slice_mut().unwrap(),
+    )
+    .expect("could not perform DST-IV operation");
+    prefac * output / grid2
 }
 
 fn plot_potentials(r: &Array1<f64>, lj: &Array1<f64>, wca: &Array1<f64>) {
@@ -108,7 +122,7 @@ fn main() {
     let plan: Arc<dyn TransformType4<f64>> = DctPlanner::new().plan_dst4(npts);
 
     let rtok = 2.0 * PI * dr;
-    let ktor = dk / PI / PI;
+    let ktor = dk / 4.0 / PI / PI;
 
     let r = Array::range(0.5, npts as f64, 1.0) * dr;
     let k = Array::range(0.5, npts as f64, 1.0) * dk;
@@ -125,16 +139,16 @@ fn main() {
 
     let wk = 1.0 + j0_adjacent + j0_between + j0_opposite;
 
-    let mayer_f_k = hankel_transform(rtok, &mayer_f, &r, &k, &plan);
-    let mayer_f_r = hankel_transform(ktor, &mayer_f_k, &k, &r, &plan);
-    //plot(&r, &mayer_f);
-    //plot(&r, &mayer_f_r);
+    let mayer_f_k = hankel_transform(rtok, &mayer_f, &r, &k);
+    let mayer_f_r = hankel_transform(ktor, &mayer_f_k, &k, &r);
+    plot(&r, &mayer_f);
+    plot(&r, &mayer_f_r);
     //assert_relative_eq!(mayer_f, mayer_f_r, epsilon=1e-5);
 
     let mut cr = Array1::<f64>::zeros(npts);
     let mut tr = Array1::<f64>::zeros(npts);
     let ones = Array1::<f64>::ones(npts);
-    let kfromr = hankel_transform(rtok, &ones, &r, &k, &plan);
+    let kfromr = hankel_transform(rtok, &ones, &r, &k);
     // println!("k: {}\nk from r: {}", k, kfromr);
 
     // plot_potentials(&r, &lj_potential, &wca_potential);
@@ -146,13 +160,13 @@ fn main() {
     for i in 0..itermax {
         println!("Iteration: {i}");
         let cr_prev = cr.clone();
-        let ck = hankel_transform(rtok, &cr_prev.clone(), &r, &k, &plan);
+        let ck = hankel_transform(rtok, &cr_prev.clone(), &r, &k);
         println!("cr before: {}", cr_prev);
         let tk = rism(&ck, &wk, p);
-        let crfromck = hankel_transform(ktor, &ck.clone(), &k, &r, &plan);
+        let crfromck = hankel_transform(ktor, &ck.clone(), &k, &r);
         println!("cr after: {}", crfromck);
         println!("tk: {}", tk);
-        tr = hankel_transform(ktor, &tk, &k, &r, &plan);
+        tr = hankel_transform(ktor, &tk, &k, &r);
         println!("tr: {}", tr);
         let cr_a = hnc(&tr, &lj_potential, beta);
         println!("cr_a: {}", cr_a);
